@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Box Example</title>
+    <script>
+        function showConfirm() {
+            // 调用 confirm() 函数
+            var result = confirm("Are you sure you want to proceed?");
+            if (result) {
+                // 用户点击了“确定”
+                alert("You pressed OK!");
+            } else {
+                // 用户点击了“取消”
+                alert("You pressed Cancel!");
+            }
+        }
+    </script>
+</head>
+<body>
+    <button onclick="showConfirm()">Show Confirm Box</button>
+</body>
+</html>
