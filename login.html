@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Page</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f3f4f6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .login-container {
+      background-color: #ffffff;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .login-container h2 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .login-container input[type="text"],
+    .login-container input[type="password"] {
+      width: 100%;
+      padding: 12px 20px;
+      margin: 8px 0;
+      display: inline-block;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+    }
+
+    .login-container input[type="submit"] {
+      width: 100%;
+      background-color: #007BFF;
+      color: white;
+      padding: 14px 20px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .login-container input[type="submit"]:hover {
+      background-color: #0056b3;
+    }
+
+    .login-container a {
+      color: #007BFF;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .login-container a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-container">
+    <h2>Login</h2>
+    <form onsubmit="return checkLogin()">
+      <input type="text" id="username" placeholder="Username" required>
+      <input type="password" id="password" placeholder="Password" required>
+      <div style="text-align: right; margin-bottom: 10px;">
+        <a href="#" onclick="showCredentials()">Show Credentials</a>
+      </div>
+      <input type="submit" value="Login">
+    </form>
+  </div>
+
+  <script>
+    function checkLogin() {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const correctUsername = 'admin';
+      const correctPassword = 'password123';
+
+      if (username === correctUsername && password === correctPassword) {
+        alert('Login successful!');
+        return true;
+      } else {
+        alert('Incorrect username or password.');
+        return false;
+      }
+    }
+
+    function showCredentials() {
+      const newWindow = window.open('', '_blank', 'width=300,height=200');
+      newWindow.document.write('<h1>Credentials</h1>');
+      newWindow.document.write('<p>Username: admin</p>');
+      newWindow.document.write('<p>Password: password123</p>');
+    }
+  </script>
+
+</body>
+
+</html>
