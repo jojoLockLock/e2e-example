@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片上传与描述</title>
+    <style>
+        #message {
+            display: none;
+            margin-top: 20px;
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <h1>分享你的故事</h1>
+    <form id="uploadForm">
+        <label for="imageUpload">选择图片文件：</label>
+        <input type="file" id="imageUpload" name="image" accept="image/*" required>
+        <br><br>
+        <label for="description">图片描述：</label>
+        <textarea id="description" name="description" rows="4" cols="50" placeholder="描述这张图片的故事..." required></textarea>
+        <br><br>
+        <button type="submit">提交</button>
+    </form>
+    <div id="message">图片上传成功！感谢您的分享。</div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // 阻止表单的默认提交行为
+
+            // 显示提示信息
+            document.getElementById('message').style.display = 'block';
+        });
+    </script>
+</body>
+</html>
