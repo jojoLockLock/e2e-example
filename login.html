@@ -16,7 +16,7 @@
       margin: 0;
     }
 
-    .login-container {
+    .login-container, .user-info-container {
       background-color: #ffffff;
       padding: 40px;
       border-radius: 10px;
@@ -25,7 +25,7 @@
       max-width: 400px;
     }
 
-    .login-container h2 {
+    .login-container h2, .user-info-container h2 {
       margin-bottom: 20px;
       color: #333;
     }
@@ -71,7 +71,7 @@
 
 <body>
 
-  <div class="login-container">
+  <div class="login-container" id="login-container">
     <h2>Login</h2>
     <form onsubmit="return checkLogin()">
       <input type="text" id="username" placeholder="Username" required>
@@ -83,6 +83,13 @@
     </form>
   </div>
 
+  <div class="user-info-container" id="user-info-container" style="display: none;">
+    <h2>Welcome, User!</h2>
+    <p>Username: <span id="user-name"></span></p>
+    <p>Email: user@example.com</p>
+    <p>Last Login: 2025-04-21</p>
+  </div>
+
   <script>
     function checkLogin() {
       const username = document.getElementById('username').value;
@@ -91,8 +98,10 @@
       const correctPassword = 'password123';
 
       if (username === correctUsername && password === correctPassword) {
-        alert('Login successful!');
-        return true;
+        document.getElementById('login-container').style.display = 'none';
+        document.getElementById('user-info-container').style.display = 'block';
+        document.getElementById('user-name').textContent = username;
+        return false;
       } else {
         alert('Incorrect username or password.');
         return false;
