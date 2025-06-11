@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>输入框事件监听</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .input-container {
+            margin-bottom: 20px;
+        }
+        input {
+            padding: 10px;
+            width: 100%;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .event-log {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            height: 200px;
+            overflow-y: auto;
+        }
+        .event {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .keydown {
+            color: #2c6e49;
+        }
+        .keyup {
+            color: #4d96ff;
+        }
+        .change {
+            color: #ff6b6b;
+        }
+        .clear-btn {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>输入框事件监听</h1>
+    
+    <div class="input-container">
+        <label for="testInput">请在下方输入框中输入内容：</label>
+        <input type="text" id="testInput" placeholder="在此输入...">
+    </div>
+    
+    <h2>事件日志：</h2>
+    <div class="event-log" id="eventLog"></div>
+    
+    <button class="clear-btn" id="clearBtn">清除日志</button>
+    
+    <script>
+        const input = document.getElementById('testInput');
+        const eventLog = document.getElementById('eventLog');
+        const clearBtn = document.getElementById('clearBtn');
+        
+        // 添加事件到日志
+        function logEvent(eventType, event) {
+            const now = new Date();
+            const timestamp = now.toLocaleTimeString() + '.' + now.getMilliseconds().toString().padStart(3, '0');
+            
+            const eventDiv = document.createElement('div');
+            eventDiv.className = `event ${eventType}`;
+            
+            let details = '';
+            if (eventType === 'keydown' || eventType === 'keyup') {
+                details = `键: ${event.key}, 键码: ${event.keyCode}`;
+            } else if (eventType === 'change') {
+                details = `新值: "${event.target.value}"`;
+            }
+            
+            eventDiv.textContent = `[${timestamp}] ${eventType.toUpperCase()} 事件触发 - ${details}`;
+            eventLog.prepend(eventDiv);
+        }
+        
+        // 监听 keydown 事件
+        input.addEventListener('keydown', (event) => {
+            logEvent('keydown', event);
+        });
+        
+        // 监听 keyup 事件
+        input.addEventListener('keyup', (event) => {
+            logEvent('keyup', event);
+        });
+        
+        // 监听 change 事件
+        input.addEventListener('change', (event) => {
+            logEvent('change', event);
+        });
+        
+        // 清除日志按钮
+        clearBtn.addEventListener('click', () => {
+            eventLog.innerHTML = '';
+        });
+    </script>
+</body>
+</html>
