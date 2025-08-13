@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Full-Screen Scroll Position</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #scrollable {
+      width: 3000px;
+      height: 3000px;
+      background: linear-gradient(45deg, #f06, transparent);
+      overflow: auto;
+      position: absolute;
+    }
+
+    #position {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 5px;
+      border-radius: 5px;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+      z-index: 100;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="scrollable">
+    <div style="width: 5000px; height: 5000px;"></div>
+  </div>
+  <div id="position">X: 0, Y: 0</div>
+
+  <script>
+    const scrollable = document.getElementById('scrollable');
+    const positionDisplay = document.getElementById('position');
+
+    scrollable.addEventListener('scroll', () => {
+      const x = scrollable.scrollLeft;
+      const y = scrollable.scrollTop;
+      positionDisplay.textContent = `X: ${x}, Y: ${y}`;
+    });
+
+    // Set the scrollable area to cover the full viewport
+    scrollable.style.width = window.innerWidth + 'px';
+    scrollable.style.height = window.innerHeight + 'px';
+
+    // Set initial scroll position to the middle
+    window.onload = () => {
+      scrollable.scrollLeft = 1000; // Adjust this value as needed
+      scrollable.scrollTop = 1000; // Adjust this value as needed
+      positionDisplay.textContent = `X: ${scrollable.scrollLeft}, Y: ${scrollable.scrollTop}`;
+    };
+  </script>
+
+</body>
+
+</html>
