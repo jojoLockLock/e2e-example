@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Click Position</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #f0f0f0;
+    }
+
+    #position {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 5px;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="position">X: 0, Y: 0</div>
+
+  <script>
+    const positionDisplay = document.getElementById('position');
+
+    document.addEventListener('click', (event) => {
+      const x = event.clientX;
+      const y = event.clientY;
+      positionDisplay.textContent = `X: ${x}, Y: ${y}`;
+      positionDisplay.style.left = `${x + 10}px`;
+      positionDisplay.style.top = `${y + 10}px`;
+    });
+  </script>
+
+</body>
+
+</html>
