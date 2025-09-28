@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Scroll XY Test</title>
+<style>
+    *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;}
+    body{padding:24px;background:#fafafa;}
+    h1{margin-bottom:16px;text-align:center;}
+    .grid{
+        display:grid;
+        grid-template-columns:repeat(2,1fr);
+        gap:24px;
+    }
+    .box{
+        border:2px solid #4caf50;
+        border-radius:8px;
+        height:260px;
+        overflow:auto;
+        position:relative;
+        background:#fff;
+    }
+    /* 只是为了生成一些彩色块当滚动内容 */
+    .item{
+        height:80px;
+        line-height:80px;
+        text-align:center;
+        font-size:24px;
+        color:#fff;
+        font-weight:bold;
+    }
+    .item:nth-child(4n+1){background:#e91e63;}
+    .item:nth-child(4n+2){background:#3f51b5;}
+    .item:nth-child(4n+3){background:#ff9800;}
+    .item:nth-child(4n){background:#009688;}
+
+    /* 浮动控制按钮 */
+    .controls{
+        position:fixed;
+        top:24px;
+        right:24px;
+        background:#ffffffee;
+        border:1px solid #ddd;
+        border-radius:6px;
+        padding:12px;
+        box-shadow:0 2px 8px rgba(0,0,0,.15);
+    }
+    .controls button{
+        display:block;
+        width:160px;
+        margin:4px 0;
+        padding:6px 10px;
+        font-size:14px;
+        cursor:pointer;
+    }
+</style>
+</head>
+<body>
+<h1>Scroll (x, y) Test Page</h1>
+
+<div class="grid">
+    <!-- 四个可滚动 DIV -->
+    <div id="box1" class="box"></div>
+    <div id="box2" class="box"></div>
+    <div id="box3" class="box"></div>
+    <div id="box4" class="box"></div>
+</div>
+
+<!-- 控制按钮 -->
+<div class="controls">
+    <strong>Quick Scroll</strong>
+    <button onclick="scrollToXY('box1',50,120)">Box 1 → (50, 120)</button>
+    <button onclick="scrollToXY('box1',0,0)">Box 1 → top-left</button>
+    <hr>
+    <button onclick="scrollToXY('box2',120,180)">Box 2 → (120, 180)</button>
+    <button onclick="scrollToXY('box2',0,200)">Box 2 → y = 200</button>
+    <hr>
+    <button onclick="scrollToXY('box3',80,50)">Box 3 → (80, 50)</button>
+    <button onclick="scrollToXY('box3',0,240)">Box 3 → y = 240</button>
+    <hr>
+    <button onclick="scrollToXY('box4',150,150)">Box 4 → (150, 150)</button>
+    <button onclick="scrollToXY('box4',0,0)">Box 4 → top-left</button>
+</div>
+
+<script>
+/* 生成滚动内容: 40 个彩色块 */
+function populate(boxId){
+    const el=document.getElementById(boxId);
+    for(let i=1;i<=40;i++){
+        const div=document.createElement('div');
+        div.className='item';
+        div.textContent=`${boxId.toUpperCase()}-${i}`;
+        el.appendChild(div);
+    }
+}
+['box1','box2','box3','box4'].forEach(populate);
+
+/* 辅助函数：滚动到指定 (x,y) */
+function scrollToXY(id,x,y){
+    const el=document.getElementById(id);
+    el.scrollTo({left:x,top:y,behavior:'smooth'});
+}
+</script>
+</body>
+</html>
