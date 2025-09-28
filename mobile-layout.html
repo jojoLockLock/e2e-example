@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8">
+  <title>科室选择</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root {
+      --left-w: 200px;
+      --primary: #1664ff;
+      --border: #e5e6eb;
+      --text: #303133;
+      --sub-text: #606266;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: SF Pro Text, Helvetica, Arial, "PingFang SC", sans-serif;
+    }
+
+    body,
+    html {
+      height: 100%;
+      background: #fff;
+    }
+
+    /* ---------- 布局 ---------- */
+    .wrapper {
+      height: 100%;
+      display: flex;
+      border-top: 1px solid var(--border);
+    }
+
+    nav,
+    section {
+      height: 100%;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    nav {
+      width: var(--left-w);
+      border-right: 1px solid var(--border);
+    }
+
+    /* ---------- 左侧样式 ---------- */
+    .dept-item {
+      padding: 14px 16px;
+      font-size: 15px;
+      color: var(--text);
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid var(--border);
+      background: #fafafa;
+      transition: background .15s;
+    }
+
+    .dept-item:hover {
+      background: #f2f3f5;
+    }
+
+    .dept-item.active {
+      background: #fff;
+      color: var(--primary);
+      font-weight: 600;
+      position: relative;
+    }
+
+    .dept-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--primary);
+    }
+
+    /* ---------- 右侧样式 ---------- */
+    section {
+      flex: 1;
+      padding: 0 12px;
+    }
+
+    .sub-list {
+      list-style: none;
+    }
+
+    .sub-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 4px;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+      color: var(--text);
+    }
+
+    .sub-item::after {
+      content: '›';
+      font-size: 18px;
+      color: #c0c4cc;
+    }
+  </style>
+</head>
+
+<body>
+  <header style="height:48px;display:flex;align-items:center;padding:0 12px;">
+    <span style="font-size:18px;font-weight:600;">选择科室</span>
+  </header>
+
+  <div class="wrapper">
+    <nav id="sidebar"></nav>
+    <section>
+      <ul class="sub-list" id="subList"></ul>
+    </section>
+  </div>
+
+  <script>
+    /* ---------- 原始数据 ---------- */
+    const data = {
+      '热门科室': ['口腔颌面畸形及正颌', '口腔黏膜科(黏膜病)', '口腔颌面肿瘤', '口腔癌'],
+      '疼痛科': ['神经病理性疼痛', '癌痛门诊', '术后镇痛'],
+      '感染性疾病科': ['病毒性肝炎', '艾滋病', '结核病'],
+      '儿科': ['小儿普通门诊', '小儿呼吸专科', '新生儿科'],
+      '眼科': ['青少年近视门诊', '白内障专科', '眼底病专科'],
+      '妇科': ['普通妇科', '宫颈疾病', '计划生育门诊'],
+      '产科': ['产前检查', '高危妊娠', '产后康复'],
+      '中医科': ['中医内科', '针灸推拿', '治未病科'],
+      '耳鼻喉科': ['鼻内镜专科', '耳聋耳鸣门诊', '咽喉疾病'],
+      '肿瘤科': ['肿瘤放疗', '肿瘤化疗', '肿瘤免疫治疗'],
+      '康复医学科': ['运动康复', '神经康复', '骨科康复'],
+      '特诊门诊': ['特需门诊', 'VIP产检', '专家门诊'],
+      '营养科': ['孕期营养', '减重门诊', '肾病营养']
+    };
+
+    /* ---------- 让左侧内容“足够长” ---------- */
+    const DUP_TIMES = 4; // ← 修改倍数即可控制左栏长度
+    const keys = Object.keys(data);
+    let longKeys = [];
+    for (let i = 0; i < DUP_TIMES; i++) {
+      longKeys = longKeys.concat(keys.map(k => k + (DUP_TIMES > 1 ? ` ${i+1}` : '')));
+    }
+
+    /* ---------- 渲染左侧 ---------- */
+    const sidebar = document.getElementById('sidebar');
+    longKeys.forEach((dept, i) => {
+      const div = document.createElement('div');
+      div.className = 'dept-item' + (i === 0 ? ' active' : '');
+      div.textContent = dept;
+      div.dataset.originKey = keys[i % keys.length]; // 保持与原数据映射
+      sidebar.appendChild(div);
+    });
+
+    /* ---------- 初始渲染右侧 ---------- */
+    const subList = document.getElementById('subList');
+    renderSub(sidebar.querySelector('.dept-item').dataset.originKey);
+
+    /* ---------- 交互 ---------- */
+    sidebar.addEventListener('click', e => {
+      if (!e.target.classList.contains('dept-item')) return;
+      sidebar.querySelectorAll('.dept-item').forEach(el => el.classList.remove('active'));
+      e.target.classList.add('active');
+      renderSub(e.target.dataset.originKey);
+    });
+
+    function renderSub(key) {
+      subList.innerHTML = '';
+      data[key].forEach(txt => {
+        const li = document.createElement('li');
+        li.className = 'sub-item';
+        li.innerHTML = `<span>${txt}</span>`;
+        subList.appendChild(li);
+      });
+    }
+  </script>
+</body>
+
+</html>
