@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>键盘按键与时长监听</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+
+    h1 {
+      margin: 0 0 12px 0;
+      font-size: 20px;
+    }
+
+    .hint {
+      color: #94a3b8;
+      margin-bottom: 16px;
+    }
+
+    .current {
+      padding: 12px;
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .badge {
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: #1f2937;
+      border: 1px solid #334155;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 14px;
+    }
+
+    .grid {
+      margin-top: 12px;
+      border-collapse: collapse;
+      width: 100%;
+      background: #0b1220;
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #1f2937;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    th {
+      background: #0b1220;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+
+    tr:hover td {
+      background: #111827;
+    }
+
+    .muted {
+      color: #94a3b8;
+    }
+
+    .footer {
+      margin-top: 16px;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+
+    .keycap {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #0b1220;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>键盘按键与时长监听</h1>
+  <div class="hint">在此页面按下并松开任意键即可看到记录。按住不放将持续计时。</div>
+
+  <div class="current">
+    <div class="row">
+      <div>当前按下：</div>
+      <div id="currentKeys" class="badge">无</div>
+      <div id="holdInfo" class="muted"></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <table>
+      <thead>
+        <tr>
+          <th>按键</th>
+          <th>代码</th>
+          <th>组合键</th>
+          <th>按下时间</th>
+          <th>松开时间</th>
+          <th>持续时长 (ms)</th>
+          <th>是否重复触发</th>
+        </tr>
+      </thead>
+      <tbody id="logBody">
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    小贴士：
+    * 按住键不放时，右侧“当前按下”会持续显示已按住时长
+    * 某些输入法或系统快捷键可能拦截部分按键事件
+    * <span class="keycap">repeat</span> 表示按键被系统长按自动重复触发（不计入首次按下时长）
+  </div>
+
+  <script>
+    // 记录每个正在按下的键：key -> { start, code, metaState }
+    const activeKeys = new Map();
+
+    // DOM
+    const currentKeysEl = document.getElementById('currentKeys');
+    const holdInfoEl = document.getElementById('holdInfo');
+    const logBody = document.getElementById('logBody');
+
+    // 工具：格式化时间戳
+    const fmt = (t) => new Date(t).toLocaleTimeString([], {
+      hour12: false
+    });
+
+    // 工具：组合键状态
+    function metaState(e) {
+      return {
+        ctrl: e.ctrlKey,
+        shift: e.shiftKey,
+        alt: e.altKey,
+        meta: e.metaKey, // Mac Command
+      };
+    }
+
+    // 工具：将 metaState 渲染为文本
+    function metaText(state) {
+      const parts = [];
+      if (state.ctrl) parts.push('Ctrl');
+      if (state.shift) parts.push('Shift');
+      if (state.alt) parts.push('Alt');
+      if (state.meta) parts.push('Meta');
+      return parts.join(' + ') || '无';
+    }
+
+    // 工具：显示当前按下的键集合
+    function renderCurrent() {
+      if (activeKeys.size === 0) {
+        currentKeysEl.textContent = '无';
+        holdInfoEl.textContent = '';
+        return;
+      }
+      const keys = [];
+      for (const [k, info] of activeKeys.entries()) {
+        keys.push(info.label);
+      }
+      currentKeysEl.textContent = keys.join('  |  ');
+    }
+
+    // 定时刷新：显示已按住多久
+    let rafId = null;
+
+    function tick() {
+      if (activeKeys.size === 0) {
+        holdInfoEl.textContent = '';
+      } else {
+        const now = performance.now();
+        // 展示最长的那个按住时间
+        let maxHold = 0;
+        for (const info of activeKeys.values()) {
+          const d = now - info.startPerf;
+          if (d > maxHold) maxHold = d;
+        }
+        holdInfoEl.textContent = `已按住约 ${Math.round(maxHold)} ms`;
+      }
+      rafId = requestAnimationFrame(tick);
+    }
+    rafId = requestAnimationFrame(tick);
+
+    // 处理 keydown
+    window.addEventListener('keydown', (e) => {
+      // 避免页面滚动等默认行为干扰（仅对部分键）
+      // e.g., Space/Arrow keys
+      if ([' ', 'Spacebar', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+      }
+
+      // 如果是重复触发（长按自动重复），仅记录到表格，不重新计时
+      if (e.repeat) {
+        appendRow({
+          key: e.key,
+          code: e.code,
+          meta: metaText(metaState(e)),
+          start: fmt(Date.now()),
+          end: '',
+          duration: '',
+          repeat: '是',
+        });
+        return;
+      }
+
+      // 已在按下集合中，则忽略（避免重复 start）
+      if (activeKeys.has(e.key)) {
+        return;
+      }
+
+      // 记录开始时间
+      activeKeys.set(e.key, {
+        startWall: Date.now(),
+        startPerf: performance.now(),
+        code: e.code,
+        meta: metaState(e),
+        label: beautifyKeyLabel(e),
+      });
+
+      renderCurrent();
+    }, {
+      passive: false
+    });
+
+    // 处理 keyup
+    window.addEventListener('keyup', (e) => {
+      const info = activeKeys.get(e.key);
+      if (!info) {
+        // 有时输入法或系统可能造成不对称事件，这里容错处理
+        return;
+      }
+      const endWall = Date.now();
+      const duration = Math.max(0, Math.round(performance.now() - info.startPerf));
+
+      appendRow({
+        key: beautifyKeyText(e.key),
+        code: e.code,
+        meta: metaText(info.meta),
+        start: fmt(info.startWall),
+        end: fmt(endWall),
+        duration: String(duration),
+        repeat: '否',
+      });
+
+      activeKeys.delete(e.key);
+      renderCurrent();
+    });
+
+    // 页面失焦时，清空活动按键，避免卡住
+    window.addEventListener('blur', () => {
+      activeKeys.clear();
+      renderCurrent();
+    });
+
+    // 渲染表格行
+    function appendRow({
+      key,
+      code,
+      meta,
+      start,
+      end,
+      duration,
+      repeat
+    }) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+                    <td>${escapeHtml(key)}</td>
+                    <td class="muted">${escapeHtml(code)}</td>
+                    <td>${escapeHtml(meta)}</td>
+                    <td class="muted">${escapeHtml(start)}</td>
+                    <td class="muted">${escapeHtml(end)}</td>
+                    <td>${escapeHtml(duration)}</td>
+                    <td>${escapeHtml(repeat)}</td>
+                `;
+      // 最新记录放在顶部
+      if (logBody.firstChild) {
+        logBody.insertBefore(tr, logBody.firstChild);
+      } else {
+        logBody.appendChild(tr);
+      }
+    }
+
+    // 美化显示 key 文本
+    function beautifyKeyText(key) {
+      if (key === ' ') return 'Space';
+      if (key === 'Meta') return 'Meta (⌘/Win)';
+      return key;
+    }
+
+    function beautifyKeyLabel(e) {
+      // 展示组合键 + 主键
+      const parts = [];
+      const m = metaState(e);
+      if (m.ctrl) parts.push('Ctrl');
+      if (m.shift) parts.push('Shift');
+      if (m.alt) parts.push('Alt');
+      if (m.meta) parts.push('Meta');
+      const main = beautifyKeyText(e.key);
+      if (!['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) {
+        parts.push(main);
+      } else if (parts.length === 0) {
+        // 仅按下修饰键时
+        parts.push(main);
+      }
+      return parts.join(' + ');
+    }
+
+    // 简单转义
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+
+</html>
