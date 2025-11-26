@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <title>轮廓检测 - OpenCV.js + Canvas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "PingFang SC", "Noto Sans CJK SC", "Microsoft Yahei", sans-serif;
+      margin: 20px;
+      color: #222;
+    }
+
+    .row {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .panel {
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      padding: 16px;
+      flex: 1 1 420px;
+      min-width: 320px;
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 16px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 160px 1fr 90px;
+      gap: 8px 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .controls label {
+      white-space: nowrap;
+    }
+
+    canvas,
+    img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      background: #fafafa;
+      border: 1px dashed #ddd;
+      border-radius: 6px;
+    }
+
+    .note {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .legend {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      vertical-align: -1px;
+      margin-right: 6px;
+      border-radius: 2px;
+    }
+
+    .legend-edge {
+      background: #00bcd4;
+    }
+
+    .legend-contour {
+      background: #e91e63;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      background: #fff;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+  </style>
+  <!-- OpenCV.js CDN -->
+  <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady()" onerror="onOpenCvError()"></script>
+</head>
+
+<body>
+  <h1>图片轮廓检测（OpenCV.js + Canvas）</h1>
+
+  <div class="panel">
+    <h2>1. 选择图片</h2>
+    <input id="fileInput" type="file" accept="image/*" />
+    <div class="note" style="margin-top:8px;">
+      支持常见图片格式（JPG/PNG/WebP 等）。加载后会自动进行轮廓检测。
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="panel">
+      <h2>2. 原图预览</h2>
+      <img id="preview" alt="原图预览" />
+    </div>
+
+    <div class="panel">
+      <h2>3. 轮廓标注结果</h2>
+
+      <div class="controls">
+        <label for="th1">Canny 阈值1</label>
+        <input id="th1" type="range" min="0" max="255" value="80" />
+        <input id="th1Val" type="number" min="0" max="255" value="80" />
+
+        <label for="th2">Canny 阈值2</label>
+        <input id="th2" type="range" min="0" max="255" value="160" />
+        <input id="th2Val" type="number" min="0" max="255" value="160" />
+
+        <label for="blur">高斯核大小</label>
+        <input id="blur" type="range" min="1" max="11" step="2" value="3" />
+        <input id="blurVal" type="number" min="1" max="11" step="2" value="3" />
+
+        <label for="minArea">最小轮廓面积</label>
+        <input id="minArea" type="range" min="0" max="5000" step="10" value="200" />
+        <input id="minAreaVal" type="number" min="0" max="100000" step="10" value="200" />
+
+        <label for="maxArea">最大轮廓面积 (0=不限)</label>
+        <input id="maxArea" type="range" min="0" max="50000" step="50" value="0" />
+        <input id="maxAreaVal" type="number" min="0" max="200000" step="50" value="0" />
+
+        <label for="dilate">膨胀次数</label>
+        <input id="dilate" type="range" min="0" max="3" step="1" value="1" />
+        <input id="dilateVal" type="number" min="0" max="10" step="1" value="1" />
+
+        <label for="rule">不规则判定</label>
+        <select id="rule">
+          <option value="poly">A. 多边形顶点数</option>
+          <option value="ratio">B. 外接矩形面积比</option>
+        </select>
+        <input id="ratioTh" type="number" min="1.0" step="0.05" value="1.20" />
+      </div>
+
+      <div class="note" style="margin-bottom:8px;">
+        <span class="legend legend-contour"></span>粉色：规则轮廓（或四边形）直接描边
+         | 黄色：不规则轮廓改画外接矩形
+      </div>
+
+      <canvas id="canvas"></canvas>
+      <div style="margin-top:12px;">
+        <button id="download" class="btn">下载结果 PNG</button>
+        <span id="status" class="note" style="margin-left:12px;">OpenCV 加载中...</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let cvReady = false;
+
+    function onOpenCvReady() {
+      cv['onRuntimeInitialized'] = () => {
+        cvReady = true;
+        setStatus('OpenCV 已就绪');
+      };
+    }
+
+    function onOpenCvError() {
+      setStatus('OpenCV 加载失败，请检查网络或更换 CDN');
+    }
+
+    function setStatus(text) {
+      document.getElementById('status').textContent = text;
+    }
+
+    const fileInput = document.getElementById('fileInput');
+    const preview = document.getElementById('preview');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const th1 = document.getElementById('th1');
+    const th2 = document.getElementById('th2');
+    const blur = document.getElementById('blur');
+    const minArea = document.getElementById('minArea');
+    const maxArea = document.getElementById('maxArea');
+    const dilate = document.getElementById('dilate');
+
+    const th1Val = document.getElementById('th1Val');
+    const th2Val = document.getElementById('th2Val');
+    const blurVal = document.getElementById('blurVal');
+    const minAreaVal = document.getElementById('minAreaVal');
+    const maxAreaVal = document.getElementById('maxAreaVal');
+    const dilateVal = document.getElementById('dilateVal');
+
+    const ruleSel = document.getElementById('rule');
+    const ratioTh = document.getElementById('ratioTh');
+    const downloadBtn = document.getElementById('download');
+
+    // 滑块与数字同步
+    const link = (rangeEl, numEl) => {
+      const sync = (fromRange) => {
+        if (fromRange) {
+          numEl.value = rangeEl.value;
+        } else {
+          if (rangeEl === blur) {
+            let v = parseInt(numEl.value || 1, 10);
+            if (v < 1) v = 1;
+            if (v > 31) v = 31;
+            if (v % 2 === 0) v += 1;
+            numEl.value = v;
+            rangeEl.value = v;
+          } else {
+            rangeEl.value = numEl.value;
+          }
+        }
+        process();
+      };
+      rangeEl.addEventListener('input', () => sync(true));
+      numEl.addEventListener('change', () => sync(false));
+    };
+    link(th1, th1Val);
+    link(th2, th2Val);
+    link(blur, blurVal);
+    link(minArea, minAreaVal);
+    link(maxArea, maxAreaVal);
+    link(dilate, dilateVal);
+
+    ruleSel.addEventListener('change', process);
+    ratioTh.addEventListener('change', process);
+
+    // 读取文件
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      preview.onload = () => {
+        URL.revokeObjectURL(url);
+        fitCanvasToImage();
+        process();
+      };
+      preview.src = url;
+    });
+
+    // 下载
+    downloadBtn.addEventListener('click', () => {
+      const a = document.createElement('a');
+      a.download = 'contours.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    });
+
+    // 自适应画布大小 = 原图显示尺寸
+    function fitCanvasToImage() {
+      const w = preview.naturalWidth;
+      const h = preview.naturalHeight;
+      const maxSide = 1600;
+      let scale = 1.0;
+      if (Math.max(w, h) > maxSide) {
+        scale = maxSide / Math.max(w, h);
+      }
+      canvas.width = Math.round(w * scale);
+      canvas.height = Math.round(h * scale);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(preview, 0, 0, canvas.width, canvas.height);
+    }
+
+    // 主处理流程：灰度 -> 模糊 -> Canny -> 膨胀 -> findContours -> 绘制
+    function process() {
+      if (!cvReady) {
+        setStatus('OpenCV 尚未就绪');
+        return;
+      }
+      if (!preview.src) {
+        setStatus('请先选择图片');
+        return;
+      }
+
+      setStatus('处理中...');
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(preview, 0, 0, canvas.width, canvas.height);
+
+      const t0 = performance.now();
+
+      let src = cv.imread(canvas);
+      let gray = new cv.Mat();
+      let blurMat = new cv.Mat();
+      let edges = new cv.Mat();
+      let hierarchy = new cv.Mat();
+
+      try {
+        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+
+        const ksize = parseInt(blur.value, 10) || 3;
+        const k = new cv.Size(ksize, ksize);
+        cv.GaussianBlur(gray, blurMat, k, 0, 0, cv.BORDER_DEFAULT);
+
+        const v1 = parseInt(th1.value, 10) || 80;
+        const v2 = parseInt(th2.value, 10) || 160;
+        cv.Canny(blurMat, edges, v1, v2);
+
+        const dilateIters = parseInt(dilate.value, 10) || 0;
+        if (dilateIters > 0) {
+          const M = cv.Mat.ones(3, 3, cv.CV_8U);
+          cv.dilate(edges, edges, M, new cv.Point(-1, -1), dilateIters);
+          M.delete();
+        }
+
+        let contours = new cv.MatVector();
+        cv.findContours(
+          edges,
+          contours,
+          hierarchy,
+          cv.RETR_EXTERNAL,
+          cv.CHAIN_APPROX_SIMPLE
+        );
+
+        const minA = parseFloat(minArea.value) || 0;
+        const maxA = parseFloat(maxArea.value) || 0;
+        const contourColor = new cv.Scalar(233, 30, 99, 255); // 规则轮廓：粉色
+        const rectColor = new cv.Scalar(0, 215, 255, 255); // 不规则：黄色（BGR: (255,215,0)）
+        const thickness = 2;
+
+        let overlay = new cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC4);
+
+        for (let i = 0; i < contours.size(); i++) {
+          const cnt = contours.get(i);
+          const area = cv.contourArea(cnt, false);
+          if (area < minA || (maxA > 0 && area > maxA)) {
+            cnt.delete();
+            continue;
+          }
+
+          // 多边形近似
+          let approx = new cv.Mat();
+          cv.approxPolyDP(cnt, approx, 1.5, true);
+
+          // 计算外接矩形
+          const rect = cv.boundingRect(approx);
+          const rectArea = rect.width * rect.height;
+
+          // 规则性判定
+          const rule = ruleSel.value; // 'poly' | 'ratio'
+          const ratioThreshold = parseFloat(ratioTh.value) || 1.20;
+          let isIrregular = false;
+
+          if (rule === 'poly') {
+            // 顶点数不是 4（或更少）视为不规则；允许近似四边形
+            // 注意：有时近似会得到 3 或 5 个点，可按需放宽到 <= 4
+            isIrregular = approx.rows !== 4;
+          } else {
+            // 面积比大于阈值时，说明轮廓难以被矩形紧密覆盖，视为不规则
+            const ratio = rectArea / Math.max(area, 1);
+            isIrregular = ratio > ratioThreshold;
+          }
+
+          if (isIrregular) {
+            // 画外接矩形（黄色）
+            const p1 = new cv.Point(rect.x, rect.y);
+            const p2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
+            cv.rectangle(overlay, p1, p2, rectColor, thickness, cv.LINE_AA);
+          } else {
+            // 直接画轮廓（粉色）
+            let one = new cv.MatVector();
+            one.push_back(approx);
+            cv.drawContours(overlay, one, -1, contourColor, thickness, cv.LINE_AA);
+            one.delete();
+          }
+
+          approx.delete();
+          cnt.delete();
+        }
+
+        let dst = new cv.Mat();
+        cv.addWeighted(src, 0.8, overlay, 0.9, 0, dst);
+        cv.imshow(canvas, dst);
+
+        const t1 = performance.now();
+        setStatus(`完成。用时 ${(t1 - t0).toFixed(1)} ms`);
+
+        overlay.delete();
+        dst.delete();
+        contours.delete();
+      } catch (err) {
+        console.error(err);
+        setStatus('处理失败：' + err.message);
+      } finally {
+        src.delete();
+        gray.delete();
+        blurMat.delete();
+        edges.delete();
+        hierarchy.delete();
+      }
+    }
+
+    window.addEventListener('resize', () => {
+      if (!preview.src) return;
+      fitCanvasToImage();
+      process();
+    });
+  </script>
+</body>
+
+</html>
